@@ -1,2 +1,2 @@
 #!/bin/bash 
-coffee -w -o resources/public/js/ -c src/coffee/
+coffee -w -o resources/public/coffee-js/ -c src/coffee/
