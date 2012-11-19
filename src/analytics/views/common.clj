@@ -7,7 +7,7 @@
               [:head
                [:title "ProB Sourcecode Analytics"]
               (map (comp include-css #(str "/css/" % ".css")) ["base" "skeleton" "layout" "analytics"])]
-              (map (comp include-js #(str "/js/" % ".js")) ["jquery-1.7.2.min"] )
+              (map (comp include-js #(str "/js/" % ".js")) ["jquery-1.7.2.min" "raphael-min" ,"dracula_graffle", "dracula_graph" "dependencies"])
               (include-js "http://static.simile.mit.edu/timeline/api-2.3.0/timeline-api.js?bundle=true")
               (include-js "/js/timeline.js")
               [:body {:onLoad "onLoad()"  :onResize "onResize()"}

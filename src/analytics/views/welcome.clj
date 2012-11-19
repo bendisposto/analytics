@@ -1,25 +1,53 @@
 (ns analytics.views.welcome
   (:require [analytics.views.common :as common]
-            [noir.content.getting-started])
-  (:use [noir.core :only [defpage]]))
+            [analytics.models.datomic :as d]
+            [noir.response :as response])
+  (:use [noir.core :only [defpage defpartial]]))
 
-(defpage "/" []
-  (common/layout
-   [:div {:class "sixteen columns"}
-    [:h1  {:id "title"} "ProB Sourcecode Analytics"]
-    [:hr]
-    [:div {:id "tl"}]
-    [:div {:id "commit-selector"}]]
-   ))
+(def tdate (atom nil))
+(def current-sha (atom nil))
 
+(defn mk-li [file] [:li (str file)])
+
+(defpartial module-selection [sha]
+  [:h3 "Module dependencies"]
+  [:select {:onChange (str "javascript: display_graph(this.options[this.selectedIndex].value,'" sha "')")}
+   [:option]
+   (map (fn [e] [:option {:value e } (str  e)]) (d/all-modules sha))
+   ])
+
+(defpage "/" {:keys [sha date] :as request}
+  
+  (reset! tdate date)
+  (reset! current-sha sha)
+  
+  (let [sha @current-sha] (common/layout
+    [:div {:class "sixteen columns"}
+     [:h1  {:id "title"} "ProB Sourcecode Analytics"]
+     [:hr]
+     [:p "This page provides an overview of the ProB Sourcecode repository. Use the Cit commit timeline to select a commit. The sections below will provide details for the selected commit."]
+     [:h3 "Git Commits"]
+     [:div {:id "tl"}]
+     (when sha [:h2 (str "Working with commit " sha " from " @tdate)]) 
+     (when sha (module-selection sha))
+     [:div {:id "canvas"}]])))
+     
+(defn mk-ds [[ts msg author sha]]
+  {"start" ts
+   "description" msg
+   "author" author
+   "sha" sha
+   "title" ""})
+
+(defpage "/dependencies" {:keys [m sha]}
+  (response/json {:name m
+                  :relying (d/using m sha)
+                  :imported (d/used-by m sha)}))
 
 (defpage "/commits" []
-  "{ 
-        \"dateTimeFormat\": \"Gregorian\",
-        \"events\": [
-          {\"start\": \"Sat May 20 2010 00:00:00 GMT-0600\",
-           \"description\": \"Commit message\",
-           \"title\": \"#1234567890\"
-          }
-        ]
-      }")
+  (let [commits (d/commits)
+        last-commit-date (ffirst commits)
+        r { "dateTimeFormat" "Gregorian"
+            "events" (map mk-ds commits)}]
+    (response/json (if @tdate (merge r {"date" @tdate}) (merge r {"date" last-commit-date})))))
+
